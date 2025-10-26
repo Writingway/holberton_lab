@@ -1,0 +1,122 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  image     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  lessonsCompleted LessonProgress[]
+  quizScores       QuizScore[]
+  gameScores       GameScore[]
+
+  @@map("users")
+}
+
+model Lesson {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  content     String
+  order       Int
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  progress LessonProgress[]
+  quizzes  Quiz[]
+
+  @@map("lessons")
+}
+
+model LessonProgress {
+  id        String   @id @default(cuid())
+  userId    String
+  lessonId  String
+  completed Boolean  @default(false)
+  completedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@map("lesson_progress")
+}
+
+model Quiz {
+  id        String   @id @default(cuid())
+  title     String
+  lessonId  String
+  questions Json     // Array of questions with answers
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  lesson Lesson      @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  scores QuizScore[]
+
+  @@map("quizzes")
+}
+
+model QuizScore {
+  id        String   @id @default(cuid())
+  userId    String
+  quizId    String
+  score     Int      // Score out of 100
+  answers   Json     // User's answers
+  completedAt DateTime @default(now())
+
+  // Relations
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quiz  Quiz  @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  @@map("quiz_scores")
+}
+
+model Game {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  type        String   // "memory", "multiple-choice", etc.
+  config      Json     // Game configuration
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  scores GameScore[]
+
+  @@map("games")
+}
+
+model GameScore {
+  id        String   @id @default(cuid())
+  userId    String
+  gameId    String
+  score     Int
+  timeSpent Int?     // Time in seconds
+  completedAt DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@map("game_scores")
+}
